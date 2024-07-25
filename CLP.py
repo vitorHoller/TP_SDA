@@ -4,6 +4,8 @@ from opcua import Client, ua
 import time
 import socket
 import multiprocessing
+import sys
+import signal
 
 def client_opc_ua(opcua_url, queue_calor, queue_temperatura, queue_referencia):
     running = True
@@ -31,7 +33,7 @@ def client_opc_ua(opcua_url, queue_calor, queue_temperatura, queue_referencia):
             client.disconnect()
             running = False
 
-def receive_messages(client_socket, queue_referencia):
+def receive_messages(client_socket, queue_referencia):    
     while True:
         try:
             message = client_socket.recv(1024)
@@ -70,7 +72,7 @@ def send_messages(client_socket, queue_calor, queue_temperatura):
             print("Client disconnected")
             break
 
-def server_tcp_ip(queue_calor, queue_temperatura, queue_referencia):
+def server_tcp_ip(queue_calor, queue_temperatura, queue_referencia, client_url):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     HOST = '127.0.0.1'  # Localhost
     PORT = 65432        # Port to listen on
@@ -83,11 +85,24 @@ def server_tcp_ip(queue_calor, queue_temperatura, queue_referencia):
         while True:
             client_socket, client_address = server_socket.accept()
             print(f"Accepted connection from {client_address}")
-            
+
+            client_opc_process = multiprocessing.Process(target=client_opc_ua, args=(client_url, queue_calor, queue_temperatura, queue_referencia))
+            client_opc_process.start()
             send_messages_process = multiprocessing.Process(target=send_messages, args=(client_socket, queue_calor, queue_temperatura))
             send_messages_process.start()
             receive_messages_process = multiprocessing.Process(target=receive_messages, args=(client_socket, queue_referencia))
             receive_messages_process.start()       
+
+            while receive_messages_process.is_alive():
+                pass
+
+            client_opc_process.terminate()
+            client_opc_process.join()
+
+            receive_messages_process.join()
+            
+            send_messages_process.terminate()
+            send_messages_process.join()
 
     except KeyboardInterrupt:
         print("Server is shutting down...")
@@ -96,24 +111,25 @@ def server_tcp_ip(queue_calor, queue_temperatura, queue_referencia):
         server_socket.close()
         print("Server has shut down.")
 
+def handle_sigint(signum, frame):
+    print("Interrupção por Control+C detectada. Encerrando...")
+    sys.exit(0)
+
 if __name__ == "__main__":
     queue_calor = multiprocessing.Queue()
     queue_temperatura = multiprocessing.Queue()
     queue_referencia = multiprocessing.Queue()
     client_url =  "opc.tcp://localhost:53530/OPCUA/SimulationServer"
 
-    client_opc_process = multiprocessing.Process(target=client_opc_ua, args=(client_url, queue_calor, queue_temperatura, queue_referencia))
-    server_process = multiprocessing.Process(target=server_tcp_ip, args=(queue_calor, queue_temperatura, queue_referencia))
+    server_process = multiprocessing.Process(target=server_tcp_ip, args=(queue_calor, queue_temperatura, queue_referencia, client_url))
+    signal.signal(signal.SIGINT, handle_sigint)
 
     try:
-        client_opc_process.start()
         server_process.start()
         
 
     except KeyboardInterrupt:
         print("Main process is shutting down...")
-        client_opc_process.terminate()
-        client_opc_process.join()
         server_process.terminate()
         server_process.join()
         print("Main process has shut down.")

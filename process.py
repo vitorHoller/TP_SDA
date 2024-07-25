@@ -4,6 +4,7 @@ from opcua import Client, ua
 import time
 import multiprocessing
 import signal
+import sys
 
 C_m = 1000 # Capacidade termica (J/K)
 T_amb = 25 # Temperatura ambiente (°C)
@@ -68,8 +69,10 @@ def controle(opcua_url, period=0.5):
 
     client.disconnect()
 
-def init_worker():
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+def handle_sigint(signum, frame):
+    print("Interrupção por Control+C detectada. Encerrando...")
+    sys.exit(0)
 
 if __name__ == "__main__":
     ##################
@@ -77,6 +80,7 @@ if __name__ == "__main__":
     client_url =  "opc.tcp://localhost:53530/OPCUA/SimulationServer"
     process_controle = multiprocessing.Process(target=controle, args=(client_url,))
     process_auto_forno = multiprocessing.Process(target=auto_forno, args=(client_url,))
+    signal.signal(signal.SIGINT, handle_sigint)
     
     subprocesses = [process_controle, process_auto_forno]
     for p in subprocesses:
