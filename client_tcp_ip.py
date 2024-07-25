@@ -1,7 +1,9 @@
 import socket
 import multiprocessing
-import time
+import os
 import subprocess
+import signal
+import sys
 
 def client_receive(s, q):
     while True:
@@ -15,12 +17,19 @@ def client_receive(s, q):
         except ConnectionResetError:
             break
 
-def write_to_file(filename, q, semaphore):
-    with open(filename, 'a') as f:
-        while True:
-            data = q.get()
-            with semaphore:
-                f.write(data + '\n')
+def write_to_file(filename, q):
+    while True: 
+        try:
+            with open(filename, 'a') as f:
+                if not q.empty():
+                    data = q.get()
+                    f.write(data + '\n')
+        except Exception as e:
+            print(f"Erro ao tentar criar ou escrever no arquivo: {e}")
+
+
+
+        
 
 def ipc_server(s, ipc_host, ipc_port, q, q_kill):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s_ipc:
@@ -41,7 +50,7 @@ def ipc_server(s, ipc_host, ipc_port, q, q_kill):
                         q_kill.put("kill")
                         break
                     s.sendall(data)
-                    q.put(f"Temperatura de Referencia: {data}")
+                    q.put(f"Temperatura de Referencia: {data.decode('utf-8')}")
                 except (ConnectionResetError, BrokenPipeError):
                     print("Connection closed.")
                     conn.close()
@@ -56,11 +65,9 @@ def ipc_server(s, ipc_host, ipc_port, q, q_kill):
 def start_client(host='127.0.0.1', port=65432, ipc_host='127.0.0.1', ipc_port=65433):
     queue = multiprocessing.Queue()
     queue_kill = multiprocessing.Queue()
-    semaphore = multiprocessing.Semaphore(1)
 
-    writer_process = multiprocessing.Process(target=write_to_file, args=('historiador.txt', queue, semaphore))
+    writer_process = multiprocessing.Process(target=write_to_file, args=('historiador.txt', queue))
     writer_process.start()
-
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
@@ -70,6 +77,7 @@ def start_client(host='127.0.0.1', port=65432, ipc_host='127.0.0.1', ipc_port=65
 
         ipc_process = multiprocessing.Process(target=ipc_server, args=(s, ipc_host, ipc_port, queue, queue_kill))
         ipc_process.start()
+
 
 
         # Iniciar client_send.py em um novo terminal e passar a fila send_queue
@@ -94,5 +102,11 @@ def start_client(host='127.0.0.1', port=65432, ipc_host='127.0.0.1', ipc_port=65
             writer_process.join()
             ipc_process.join()
 
+def handle_sigint(signum, frame):
+    print("Interrupção por Control+C detectada. Encerrando...")
+    sys.exit(0)
+
 if __name__ == "__main__":
     start_client()
+    signal.signal(signal.SIGINT, handle_sigint)
+
