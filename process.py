@@ -5,6 +5,7 @@ import time
 import multiprocessing
 import signal
 import sys
+from config import TEMPERATURA_ATUAL_NS, TEMPERATURA_REFERENCIA_NS, CALOR_NS, TEMPERATURA_ATUAL_I, TEMPERATURA_REFERENCIA_I, CALOR_I
 
 C_m = 1000 # Capacidade termica (J/K)
 T_amb = 25 # Temperatura ambiente (°C)
@@ -25,8 +26,9 @@ def auto_forno(opcua_url, period=1):
 
     client = Client(opcua_url)
     client.connect()
-    temp_atual = client.get_node("ns=3;i=1009")
-    calor_node = client.get_node("ns=3;i=1011")
+    temp_atual = client.get_node(f"ns={TEMPERATURA_ATUAL_NS};i={TEMPERATURA_ATUAL_I}")
+    calor_node = client.get_node(f"ns={CALOR_NS};i={CALOR_I}")
+
     try:
         while True:
             calor = calor_node.get_value()
@@ -46,9 +48,10 @@ def controle(opcua_url, period=0.5):
 
     client = Client(opcua_url)
     client.connect()
-    temp_atual = client.get_node("ns=3;i=1009")
-    temp_ref = client.get_node("ns=3;i=1010")
-    calor = client.get_node("ns=3;i=1011")
+    temp_atual = client.get_node(f"ns={TEMPERATURA_ATUAL_NS};i={TEMPERATURA_ATUAL_I}")
+    temp_ref = client.get_node(f"ns={TEMPERATURA_REFERENCIA_NS};i={TEMPERATURA_REFERENCIA_I}")
+    calor = client.get_node(f"ns={CALOR_NS};i={CALOR_I}")
+
 
     try:
         while True:

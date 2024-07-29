@@ -1,18 +1,17 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from opcua import Client, ua
+from opcua import Client
 import signal
 import sys
 import multiprocessing
+from config import TEMPERATURA_ATUAL_NS, TEMPERATURA_REFERENCIA_NS, CALOR_NS, TEMPERATURA_ATUAL_I, TEMPERATURA_REFERENCIA_I, CALOR_I
 
 def client_opc_ua(opcua_url, filename):
     running = True
 
     client = Client(opcua_url)
     client.connect()
-    temp_atual = client.get_node("ns=3;i=1009")
-    temp_referencia = client.get_node("ns=3;i=1010")
-    calor_node = client.get_node("ns=3;i=1011")
+    temp_atual = client.get_node(f"ns={TEMPERATURA_ATUAL_NS};i={TEMPERATURA_ATUAL_I}")
+    temp_referencia = client.get_node(f"ns={TEMPERATURA_REFERENCIA_NS};i={TEMPERATURA_REFERENCIA_I}")
+    calor_node = client.get_node(f"ns={CALOR_NS};i={CALOR_I}")
 
     while running:
         try:
@@ -23,7 +22,7 @@ def client_opc_ua(opcua_url, filename):
             data = f"Temperatura atual: {T_atual}, Temperatura referencia: {T_referencia}, Calor: {calor}"
 
             try:
-                with open("mex.txt", 'a') as f:
+                with open(filename, 'a') as f:
                     f.write(data + '\n')
             except Exception as e:
                 print(f"Erro ao tentar criar ou escrever no arquivo: {e}")
