@@ -38,7 +38,7 @@ def handle_sigint(signum, frame):
 
 if __name__ == "__main__":
     client_url =  "opc.tcp://localhost:53530/OPCUA/SimulationServer"
-    filename = "mex.txt"
+    filename = "mes.txt"
 
     signal.signal(signal.SIGINT, handle_sigint)
 
