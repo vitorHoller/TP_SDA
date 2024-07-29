@@ -2,7 +2,9 @@
 
 Primeiramente é necessário inicializar as variáveis no servidor OPC/UA. Para facilitar existe um arquivo chamado `config.py`, no qual você pode colocar os respectivos valores de `ns` e `i` de cada uma das variáveis do seu servidor. Por padrão, os valores são os contidos na imagem abaixo.
 
-![Screenshot](images/Screenshot from 2024-07-28 21-23-11.png)
+![Screenshot](Screenshot from 2024-07-28 21-23-11.png)
+![Screenshot](Screenshot from 2024-07-28 22-35-24.png)
+
 
 Além disso, é necessário instalar as dependências necessárias para este projeto. Eu recomendo iniciar um ambiente virtual. Se estiver rodando no Linux, execute os códigos abaixo:
 
@@ -29,8 +31,6 @@ python3 MES.py
 python3 CLP.py
 python3 server_tcp_ip.py
 ```
-
-
 
 Após fazer isso, basta colocar diferentes temperaturas de referência e ver como o sistema atua.
 
